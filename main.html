@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Figma Design</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: #e5e5e5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    zoom: 0.75; /* Scale down to 75% for better viewport fit */
+}
+
+.frame {
+    position: relative;
+    width: 393.0px;
+    height: 852.0px;
+    background: #FAFAFA;
+    border-radius: 32.0px;
+    overflow: hidden;
+}
+
+.frame-1321318734 {
+    display: flex;
+    flex-direction: row;
+    flex: none;
+    height: fit-content;
+    align-items: center;
+    align-self: stretch;
+    justify-content: flex-start;
+    order: 0;
+    border: 1.0px solid #D6D6D6;
+    border-radius: 8.0px 8.0px 0.0px 0.0px;
+    gap: 10.0px;
+    padding: 20.0px 16.0px;
+}
+
+.frame-1321318735 {
+    display: flex;
+    flex-direction: row;
+    flex: none;
+    height: 59.0px;
+    align-items: center;
+    align-self: stretch;
+    justify-content: flex-start;
+    order: 0;
+    border: 1.0px solid #D6D6D6;
+    border-radius: 0.0px 0.0px 8.0px 8.0px;
+    gap: 10.0px;
+    padding: 20.0px 16.0px;
+}
+
+.frame-1321318736 {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    width: 329.0px;
+    height: 117.0px;
+    left: 32.000000000000114px;
+    top: 252.0px;
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
+.frame-2 {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    width: 361.0px;
+    height: 46.0px;
+    left: 16.000000000000114px;
+    top: 662.0px;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10.0px);
+    background: linear-gradient(200.57deg, #95218B 0.00%, #3A3CB3 100.00%);
+    border-radius: 62.0px;
+    color: #FFFFFF;
+    gap: 8.0px;
+    overflow: hidden;
+}
+
+.frame-3 {
+    position: absolute;
+    width: 110.0px;
+    height: 22.0px;
+    left: 141.5000000000001px;
+    top: 732.0px;
+    backdrop-filter: blur(10.0px);
+    overflow: hidden;
+}
+
+.headline {
+    position: absolute;
+    display: flex;
+    width: 154.0px;
+    height: 58.0px;
+    left: 32.000000000000114px;
+    top: 170.0px;
+    align-items: center;
+    color: #353240;
+    font-family: 'Inter';
+    font-size: 48.0px;
+    font-style: normal;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 120%;
+    text-align: left;
+}
+
+.headline-2 {
+    position: absolute;
+    display: flex;
+    width: 361.0px;
+    height: 37.0px;
+    left: 16.000000000000114px;
+    top: 778.0px;
+    align-items: center;
+    justify-content: center;
+    color: rgba(53, 50, 64, 0.800000011920929);
+    font-family: 'Inter';
+    font-size: 13.0px;
+    font-style: normal;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 120%;
+    text-align: center;
+}
+
+.home-indicator {
+    position: absolute;
+    width: 393.0px;
+    height: 21.0px;
+    left: 0.0px;
+    top: 831.0px;
+}
+
+.home-indicator-2 {
+    position: absolute;
+    width: 139.0px;
+    height: 5.0px;
+    left: 127.00000000000011px;
+    top: 8.0px;
+    background: #2C194D;
+    border-radius: 100.0px;
+}
+
+.label-text {
+    position: absolute;
+    display: flex;
+    width: 110.0px;
+    height: 22.0px;
+    left: 0.0px;
+    top: 0.0px;
+    align-items: center;
+    justify-content: center;
+    color: #353240;
+    font-family: 'Inter';
+    font-size: 15.0px;
+    font-style: normal;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 22.0px;
+    text-align: center;
+}
+
+
+input {
+    outline: none;
+    font-family: inherit;
+    background: transparent;
+}
+
+input::placeholder {
+    color: #C0C0C0;
+}
+
+input:focus {
+    border-color: #95228C;
+}
+
+button {
+    cursor: pointer;
+    transition: transform 0.2s, opacity 0.2s;
+    border: none;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+a {
+    text-decoration: none;
+}
+
+a:hover {
+    opacity: 0.8;
+}
+
+@media (max-width: 420px) {
+    body {
+        padding: 10px;
+        zoom: 1; /* Reset zoom on mobile */
+    }
+    [class*="frame"], [class*="container"] {
+        width: 100% !important;
+        max-width: 393px;
+        height: auto !important;
+        min-height: 852px;
+    }
+}
+
+    </style>
+</head>
+<body>
+<div class="frame">
+  <div class="home-indicator">
+    <div class="home-indicator-2"></div>
+  </div>
+  <h1 class="headline">Sign in</h1>
+  <div class="frame-1321318736">
+    <input type="email" class="frame-1321318734" value="andy@gmail.com">
+    <input type="password" class="frame-1321318735" placeholder="Password">
+  </div>
+  <button class="frame-2">Sign in</button>
+  <div class="frame-3">
+    <p class="label-text">Create account</p>
+  </div>
+  <a href="#" class="headline-2">Forgot password</a>
+</div>
+</body>
+</html>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Figma Design</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Itim:wght@100;200;300;400;500;600;700;800;900&family=Roboto:wght@100;200;300;400;500;600;700;800;900&family=Sansation:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
 * {
     margin: 0;
@@ -20,162 +20,200 @@ body {
     align-items: center;
     min-height: 100vh;
     padding: 20px;
+    zoom: 0.75; /* Scale down to 75% for better viewport fit */
 }
 
-.create-account-text {
+.enter-your-id {
     position: absolute;
     display: flex;
-    width: 110.0px;
-    height: 22.0px;
-    left: 0.0px;
-    top: 0.0px;
+    width: 99.0px;
+    height: 17.0px;
+    left: 80.0px;
+    top: 461.0px;
     align-items: center;
-    color: #353240;
-    font-family: 'Inter';
+    justify-content: center;
+    color: #706C6C;
+    font-family: 'Sansation';
     font-size: 15.0px;
     font-style: normal;
-    font-weight: 600;
-    letter-spacing: -0.15px;
-    line-height: 22.0px;
+    font-weight: 400;
+    letter-spacing: 0.00em;
+    line-height: 100.0%;
     text-align: center;
 }
 
-.email-input {
+.enter-your-password {
+    position: absolute;
     display: flex;
-    flex-direction: row;
-    height: fit-content;
+    width: 153.0px;
+    height: 17.0px;
+    left: 84.0px;
+    top: 555.0px;
     align-items: center;
-    align-self: stretch;
-    border: 1.0px solid #D6D6D6;
-    border-radius: 8.0px 8.0px 0.0px 0.0px;
-    flex: none;
-    gap: 10.0px;
-    justify-content: flex-start;
-    order: 0;
-    padding: 20.0px 16.0px 20.0px 16.0px;
-}
-
-.forgot-password-link {
-    position: absolute;
-    display: flex;
-    width: 361.0px;
-    height: 37.0px;
-    left: 16.000000000000114px;
-    top: 778.0px;
-    align-items: center;
-    color: rgba(53, 50, 64, 0.800000011920929);
-    font-family: 'Inter';
-    font-size: 13.0px;
-    font-style: normal;
-    font-weight: 500;
-    letter-spacing: -0.26px;
-    line-height: 120%;
-    text-align: center;
-}
-
-.frame {
-    position: absolute;
-    width: 393.0px;
-    height: 852.0px;
-    background: #FAFAFA;
-    border-radius: 32.0px;
-    overflow: hidden;
-}
-
-.frame-2 {
-    position: absolute;
-    width: 110.0px;
-    height: 22.0px;
-    left: 141.5000000000001px;
-    top: 732.0px;
-    backdrop-filter: blur(10.0px);
-    overflow: hidden;
-}
-
-.home-indicator {
-    position: absolute;
-    width: 393.0px;
-    height: 21.0px;
-    left: 0.0px;
-    top: 831.0px;
-}
-
-.home-indicator-bar {
-    position: absolute;
-    width: 139.0px;
-    height: 5.0px;
-    left: 127.00000000000011px;
-    top: 8.0px;
-    background: #2C194D;
-    border-radius: 100.0px;
-}
-
-.input-group {
-    position: absolute;
-    display: flex;
-    flex-direction: column;
-    width: 329.0px;
-    height: 117.0px;
-    left: 32.000000000000114px;
-    top: 252.0px;
-    align-items: flex-start;
-    justify-content: flex-start;
-}
-
-.password-input {
-    display: flex;
-    flex-direction: row;
-    height: 59.0px;
-    align-items: center;
-    align-self: stretch;
-    border: 1.0px solid #D6D6D6;
-    border-radius: 0.0px 0.0px 8.0px 8.0px;
-    flex: none;
-    gap: 10.0px;
-    justify-content: flex-start;
-    order: 0;
-    padding: 20.0px 16.0px 20.0px 16.0px;
-}
-
-.sign-in-button {
-    position: absolute;
-    display: flex;
-    flex-direction: column;
-    width: 361.0px;
-    height: 46.0px;
-    left: 16.000000000000114px;
-    top: 662.0px;
-    align-items: center;
-    backdrop-filter: blur(10.0px);
-    background: linear-gradient(200.57deg, #95218B 0.00%, #3A3CB3 100.00%);
-    border-radius: 62.0px;
-    gap: 8.0px;
     justify-content: center;
-    overflow: hidden;
+    color: #706C6C;
+    font-family: 'Sansation';
+    font-size: 15.0px;
+    font-style: normal;
+    font-weight: 400;
+    letter-spacing: 0.00em;
+    line-height: 100.0%;
+    text-align: center;
 }
 
-.sign-in-heading {
+.icons8-instagram-96-1 {
+    position: absolute;
+    width: 96.0px;
+    height: 96.0px;
+    left: 149.0px;
+    top: 122.0px;
+    background-image: url('https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/556112a9-a924-4120-96c6-eb8b5a1260eb');
+    background-position: center;
+    background-size: cover;
+}
+
+.instagram {
     position: absolute;
     display: flex;
-    width: 154.0px;
-    height: 58.0px;
-    left: 32.000000000000114px;
-    top: 170.0px;
+    width: 220.0px;
+    height: 56.0px;
+    left: 87.0px;
+    top: 240.0px;
     align-items: center;
-    color: #353240;
-    font-family: 'Inter';
+    justify-content: center;
+    color: #000000;
+    font-family: 'Roboto';
     font-size: 48.0px;
     font-style: normal;
     font-weight: 700;
-    letter-spacing: -0.96px;
-    line-height: 120%;
-    text-align: left;
+    letter-spacing: 0.00em;
+    line-height: 100.0%;
+    text-align: center;
 }
 
-/* Interactive states */
+.iphone-14-pro-1 {
+    position: relative;
+    width: 393.0px;
+    height: 852.0px;
+    background: #FFFFFF;
+    overflow: hidden;
+}
+
+.login {
+    position: absolute;
+    display: flex;
+    width: 52.0px;
+    height: 26.0px;
+    left: 171.0px;
+    top: 723.0px;
+    align-items: center;
+    justify-content: center;
+    color: #FFFFFF;
+    font-family: 'Itim';
+    font-size: 22.0px;
+    font-style: normal;
+    font-weight: 400;
+    letter-spacing: 0.00em;
+    line-height: 100.0%;
+    text-align: center;
+}
+
+.login-into-your-account {
+    position: absolute;
+    display: flex;
+    width: 222.0px;
+    height: 26.0px;
+    left: 86.0px;
+    top: 385.0px;
+    align-items: center;
+    justify-content: center;
+    color: #000000;
+    font-family: 'Itim';
+    font-size: 22.0px;
+    font-style: normal;
+    font-weight: 400;
+    letter-spacing: 0.00em;
+    line-height: 100.0%;
+    text-align: center;
+}
+
+.material-symbols-menu-rounded {
+    position: absolute;
+    width: 24.0px;
+    height: 24.0px;
+    left: 24.0px;
+    top: 27.0px;
+    overflow: hidden;
+}
+
+.rectangle-1 {
+    position: absolute;
+    width: 269.0px;
+    height: 61.0px;
+    left: 62.0px;
+    top: 439.0px;
+    background: #F4F4F4;
+    border: 3.0px solid #F48FB1;
+    border-radius: 20.0px;
+}
+
+.rectangle-2 {
+    position: absolute;
+    width: 269.0px;
+    height: 61.0px;
+    left: 62.0px;
+    top: 533.0px;
+    background: #F4F4F4;
+    border: 3.0px solid #F48FB1;
+    border-radius: 20.0px;
+}
+
+.rectangle-3 {
+    position: absolute;
+    width: 319.0px;
+    height: 333.0px;
+    left: 37.0px;
+    top: 333.0px;
+    background: #F8F8F8;
+    border-radius: 20.0px;
+    box-shadow: 9.0px 9.0px 16.0px rgba(146, 31, 31, 0.25), -9.0px -9.0px 16.0px rgba(173, 122, 122, 0.25);
+}
+
+.rectangle-4 {
+    position: absolute;
+    width: 90.0px;
+    height: 40.0px;
+    left: 152.0px;
+    top: 716.0px;
+    background: #E9335F;
+    border-radius: 10.0px;
+}
+
+.rectangle-5 {
+    position: absolute;
+    width: 40.0px;
+    height: 40.0px;
+    left: 16.0px;
+    top: 19.0px;
+    background: #F6F4F4;
+    border-radius: 10.0px;
+    box-shadow: 0.0px 0.0px 6.0px 4.0px rgba(0, 0, 0, 0.25);
+}
+
+.vector {
+    position: absolute;
+    width: 18.0px;
+    height: 12.0px;
+    left: 3.0px;
+    top: 6.0px;
+    background: #0A0A0A;
+}
+
+
 input {
     outline: none;
     font-family: inherit;
+    background: transparent;
 }
 
 input::placeholder {
@@ -183,50 +221,64 @@ input::placeholder {
 }
 
 input:focus {
-    border-color: #4A90E2;
+    border-color: #95228C;
 }
 
 button {
-    border: none;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: transform 0.2s, opacity 0.2s;
+    border: none;
+    font-family: inherit;
+    font-size: inherit;
 }
 
 button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    opacity: 0.9;
 }
 
 button:active {
-    transform: translateY(0);
+    transform: scale(0.98);
 }
 
 a {
     text-decoration: none;
-    transition: opacity 0.2s;
 }
 
 a:hover {
-    opacity: 0.7;
+    opacity: 0.8;
+}
+
+@media (max-width: 420px) {
+    body {
+        padding: 10px;
+        zoom: 1; /* Reset zoom on mobile */
+    }
+    [class*="frame"], [class*="container"] {
+        width: 100% !important;
+        max-width: 393px;
+        height: auto !important;
+        min-height: 852px;
+    }
 }
 
     </style>
 </head>
 <body>
-<div class="frame">
-  <div class="home-indicator">
-    <div class="home-indicator-bar"></div>
+<div class="iphone-14-pro-1">
+  <div class="icons8-instagram-96-1" data-node-id="3:3"></div>
+  <div class="rectangle-3" data-node-id="3:10"></div>
+  <h1 class="instagram">Instagram</h1>
+  <div class="rectangle-1" data-node-id="3:5"></div>
+  <p class="enter-your-id">Enter your id....</p>
+  <div class="rectangle-2" data-node-id="3:8"></div>
+  <p class="enter-your-password">Enter your password....</p>
+  <p class="login-into-your-account">Login into your account</p>
+  <div class="rectangle-4" data-node-id="3:11"></div>
+  <p class="login">Login</p>
+  <div class="rectangle-5" data-node-id="3:13"></div>
+  <div class="material-symbols-menu-rounded">
+    <div class="vector" data-node-id="3:15"></div>
   </div>
-  <h1 class="sign-in-heading">Sign in</h1>
-  <div class="input-group">
-    <input type="email" class="email-input" value="andy@gmail.com">
-    <input type="password" class="password-input" placeholder="Password">
-  </div>
-  <button class="sign-in-button">Sign in</button>
-  <div class="frame-2">
-    <p class="create-account-text">Create account</p>
-  </div>
-  <a href="#" class="forgot-password-link">Forgot password</a>
 </div>
 </body>
 </html>
