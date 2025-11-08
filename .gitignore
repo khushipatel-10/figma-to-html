@@ -49,3 +49,4 @@ htmlcov/
 
 convert.py
 test_output.html
+get-pip.py
