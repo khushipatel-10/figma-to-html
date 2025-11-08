@@ -1,9 +1,5 @@
 """
-Updated Figma to HTML/CSS Converter 
-
-Issues:
-    - 'Forgot password?' position not correct in output.html
-    - Top corners are not rounded like the bottom ones 
+Figma to HTML/CSS Converter - Output generated
 
 """
 
@@ -32,7 +28,7 @@ class FigmaToHTMLConverter:
         return response.json()
     
     def rgba_to_css(self, color: Dict, opacity: float = None) -> str:
-        """Convert Figma RGBA to CSS color with optional separate opacity"""
+        """Convert Figma RGBA to CSS color"""
         if not color:
             return "transparent"
         
@@ -40,7 +36,6 @@ class FigmaToHTMLConverter:
         g = int(color.get('g', 0) * 255)
         b = int(color.get('b', 0) * 255)
         
-        # Use separate opacity if provided, otherwise use color's alpha
         if opacity is not None:
             a = opacity
         else:
@@ -59,28 +54,20 @@ class FigmaToHTMLConverter:
         if not stops:
             return None
         
-        # Get gradient angle from handle positions
         handles = fill.get('gradientHandlePositions', [])
         if len(handles) >= 2:
-            # First handle is start point, second is end point
             x1, y1 = handles[0]['x'], handles[0]['y']
             x2, y2 = handles[1]['x'], handles[1]['y']
             
-            # Calculate angle: atan2 gives angle from horizontal right
             dx = x2 - x1
             dy = y2 - y1
             
-            # Get angle in degrees
             angle_rad = math.atan2(dy, dx)
             angle_deg = math.degrees(angle_rad)
-            
-            # Convert to CSS gradient angle
-            # CSS: 0deg = up, 90deg = right, 180deg = down, 270deg = left
             css_angle = (90 - angle_deg) % 360
         else:
             css_angle = 180
         
-        # Build gradient stops
         gradient_stops = []
         for stop in stops:
             color = self.rgba_to_css(stop['color'])
@@ -158,39 +145,32 @@ class FigmaToHTMLConverter:
         if node.get('type') != 'FRAME':
             return False
         
-        # Must have border
         strokes = node.get('strokes', [])
         if not strokes or not any(s.get('visible', True) for s in strokes):
             return False
         
-        # Must have layout mode
         if not node.get('layoutMode'):
             return False
         
-        # Must have text child
         text = self.get_text_content(node)
         if not text:
             return False
         
-        # Must NOT have gradient (that's a button)
         fills = node.get('fills', []) or node.get('background', [])
         visible_fills = [f for f in fills if f.get('visible', True)]
         if any(f.get('type') == 'GRADIENT_LINEAR' for f in visible_fills):
             return False
         
-        # Check background color and border radius
         if visible_fills:
             solid_fills = [f for f in visible_fills if f.get('type') == 'SOLID']
             if solid_fills:
                 color = solid_fills[0].get('color', {})
                 r, g, b = color.get('r', 1), color.get('g', 1), color.get('b', 1)
-                # If it has a colored background (not white/transparent), might be button
                 is_colored = not (r > 0.85 and g > 0.85 and b > 0.85)
                 radius = node.get('cornerRadius', 0)
                 if is_colored and radius > 20:
                     return False
         
-        # Size check
         bounds = node.get('absoluteBoundingBox', {})
         height = bounds.get('height', 999)
         width = bounds.get('width', 0)
@@ -202,39 +182,30 @@ class FigmaToHTMLConverter:
         if node.get('type') != 'FRAME':
             return False
         
-        # Must have background OR layout mode with children
         fills = node.get('fills', []) or node.get('background', [])
         visible_fills = [f for f in fills if f.get('visible', True)]
         
-        # Gradient is strong indicator of button
         has_gradient = any(f.get('type') == 'GRADIENT_LINEAR' for f in visible_fills)
         
-        # Check for solid colored background
         has_colored_bg = False
         if not has_gradient and visible_fills:
             solid_fills = [f for f in visible_fills if f.get('type') == 'SOLID']
             if solid_fills:
                 color = solid_fills[0].get('color', {})
                 r, g, b = color.get('r', 1), color.get('g', 1), color.get('b', 1)
-                # Colored (not white/transparent)
                 has_colored_bg = not (r > 0.85 and g > 0.85 and b > 0.85)
         
-        # High border radius suggests button
         radius = node.get('cornerRadius', 0)
         
-        # Must have text child
         text = self.get_text_content(node)
         if not text:
             return False
         
-        # Size check
         bounds = node.get('absoluteBoundingBox', {})
         height = bounds.get('height', 0)
         width = bounds.get('width', 0)
         
         is_button_size = 20 <= height <= 100 and width > 80
-        
-        # Button criteria
         is_button_style = has_gradient or (has_colored_bg and radius >= 15)
         
         return is_button_size and is_button_style
@@ -253,11 +224,10 @@ class FigmaToHTMLConverter:
         return any(keyword in text for keyword in link_keywords)
     
     def should_skip_node(self, node: Dict, parent: Dict = None) -> bool:
-        """Check if node should be skipped (text child of button/input)"""
+        """Check if node should be skipped"""
         if node.get('type') != 'TEXT':
             return False
         
-        # Skip text nodes that are children of buttons or inputs
         if parent:
             if self.is_likely_button(parent) or self.is_likely_input(parent):
                 return True
@@ -269,7 +239,6 @@ class FigmaToHTMLConverter:
         css = {}
         style = node.get('style', {})
         
-        # Font
         font_family = style.get('fontFamily', 'Inter')
         self.fonts.add(font_family)
         css['font-family'] = f"'{font_family}'"
@@ -277,7 +246,6 @@ class FigmaToHTMLConverter:
         css['font-weight'] = str(style.get('fontWeight', 400))
         css['font-size'] = f"{style.get('fontSize', 16)}px"
         
-        # Line height
         line_height_unit = style.get('lineHeightUnit', 'AUTO')
         if line_height_unit == 'PIXELS':
             css['line-height'] = f"{style.get('lineHeightPx')}px"
@@ -288,26 +256,24 @@ class FigmaToHTMLConverter:
             percent = style.get('lineHeightPercent', 100)
             css['line-height'] = f"{percent:.1f}%"
         
-        # Alignment
         text_align = style.get('textAlignHorizontal', 'LEFT')
         align_map = {'LEFT': 'left', 'CENTER': 'center', 'RIGHT': 'right', 'JUSTIFIED': 'justify'}
         css['text-align'] = align_map.get(text_align, 'left')
         
-        # Letter spacing
         if 'letterSpacing' in style:
-            css['letter-spacing'] = f"{style['letterSpacing']}px"
+            spacing = style['letterSpacing']
+            if abs(spacing) < 1:
+                css['letter-spacing'] = f"{spacing / style.get('fontSize', 16):.2f}em"
+            else:
+                css['letter-spacing'] = f"{spacing}px"
         
-        # Color - CRITICAL: Handle opacity separately from color alpha
         fills = node.get('fills', [])
         if fills:
             visible_fills = [f for f in fills if f.get('visible', True)]
             if visible_fills:
                 fill = visible_fills[0]
-                # Get opacity from fill, not just from color.a
                 fill_opacity = fill.get('opacity', 1)
                 color = fill.get('color', {})
-                
-                # Combine color with fill opacity
                 css['color'] = self.rgba_to_css(color, fill_opacity)
         
         return css
@@ -318,11 +284,10 @@ class FigmaToHTMLConverter:
         node_type = node.get('type')
         bounds = node.get('absoluteBoundingBox', {})
         
-        # === POSITIONING AND LAYOUT ===
+        # POSITIONING
         parent_layout = parent.get('layoutMode') if parent else None
         
         if parent_layout in ['HORIZONTAL', 'VERTICAL']:
-            # Child in auto-layout parent
             layout_sizing_h = node.get('layoutSizingHorizontal', 'FIXED')
             layout_sizing_v = node.get('layoutSizingVertical', 'FIXED')
             
@@ -344,7 +309,6 @@ class FigmaToHTMLConverter:
             css['flex'] = 'none'
             css['order'] = '0'
         else:
-            # Absolute positioning
             css['position'] = 'absolute'
             
             if parent:
@@ -359,7 +323,7 @@ class FigmaToHTMLConverter:
             if bounds.get('height'):
                 css['height'] = f"{bounds['height']}px"
         
-        # === AUTO-LAYOUT CONTAINER ===
+        # AUTO-LAYOUT
         layout_mode = node.get('layoutMode')
         if layout_mode in ['HORIZONTAL', 'VERTICAL']:
             css['display'] = 'flex'
@@ -378,7 +342,6 @@ class FigmaToHTMLConverter:
             css['align-items'] = align_map.get(counter_align, 'flex-start')
             css['justify-content'] = align_map.get(primary_align, 'flex-start')
             
-            # Padding
             pt = node.get('paddingTop', 0)
             pr = node.get('paddingRight', 0)
             pb = node.get('paddingBottom', 0)
@@ -392,12 +355,11 @@ class FigmaToHTMLConverter:
                 else:
                     css['padding'] = f"{pt}px {pr}px {pb}px {pl}px"
             
-            # Gap
             gap = node.get('itemSpacing', 0)
             if gap > 0:
                 css['gap'] = f"{gap}px"
         
-        # === BACKGROUND ===
+        # BACKGROUND
         if node_type != 'TEXT':
             fills = node.get('fills', []) or node.get('background', [])
             visible_fills = [f for f in fills if f.get('visible', True)]
@@ -411,7 +373,7 @@ class FigmaToHTMLConverter:
                     if gradient:
                         css['background'] = gradient
         
-        # === BORDER ===
+        # BORDER
         strokes = node.get('strokes', [])
         visible_strokes = [s for s in strokes if s.get('visible', True)]
         
@@ -421,35 +383,34 @@ class FigmaToHTMLConverter:
                 stroke_color = self.rgba_to_css(visible_strokes[0].get('color', {}))
                 css['border'] = f"{stroke_weight}px solid {stroke_color}"
         
-        # === BORDER RADIUS - Handle per-corner radii ===
-        # First check rectangleCornerRadii (per-corner)
+        # BORDER RADIUS
         corners = node.get('rectangleCornerRadii')
         
         if corners and len(corners) == 4:
-            # rectangleCornerRadii order: [topLeft, topRight, bottomRight, bottomLeft]
             tl, tr, br, bl = corners
             
-            # Check if all corners are the same
             if tl == tr == br == bl:
                 if tl > 0:
                     css['border-radius'] = f"{tl}px"
             else:
-                # Different corners - CSS order: top-left, top-right, bottom-right, bottom-left
                 css['border-radius'] = f"{tl}px {tr}px {br}px {bl}px"
         else:
-            # Fall back to uniform cornerRadius
             radius = node.get('cornerRadius', 0)
             if radius > 0:
                 css['border-radius'] = f"{radius}px"
         
-        # === TEXT STYLES ===
+        # TEXT STYLES
         if node_type == 'TEXT':
             text_styles = self.extract_text_styles(node)
             css.update(text_styles)
             css['display'] = 'flex'
             css['align-items'] = 'center'
+            
+            # Handle centered text - wrap in flex container
+            if text_styles.get('text-align') == 'center':
+                css['justify-content'] = 'center'
         
-        # === EFFECTS (Shadows, Blur, etc.) ===
+        # EFFECTS
         effects = node.get('effects', [])
         visible_effects = [e for e in effects if e.get('visible', True)]
         
@@ -481,37 +442,19 @@ class FigmaToHTMLConverter:
         if shadows:
             css['box-shadow'] = ', '.join(shadows)
         
-        # === OPACITY ===
+        # OPACITY
         opacity = node.get('opacity', 1)
         if opacity < 1:
             css['opacity'] = str(opacity)
         
-        # === OVERFLOW ===
+        # OVERFLOW
         if node.get('clipsContent', False):
             css['overflow'] = 'hidden'
         
-        # === BLEND MODE ===
-        blend_mode = node.get('blendMode')
-        if blend_mode and blend_mode != 'PASS_THROUGH' and blend_mode != 'NORMAL':
-            blend_map = {
-                'MULTIPLY': 'multiply',
-                'SCREEN': 'screen',
-                'OVERLAY': 'overlay',
-                'DARKEN': 'darken',
-                'LIGHTEN': 'lighten',
-                'COLOR_DODGE': 'color-dodge',
-                'COLOR_BURN': 'color-burn',
-                'HARD_LIGHT': 'hard-light',
-                'SOFT_LIGHT': 'soft-light',
-                'DIFFERENCE': 'difference',
-                'EXCLUSION': 'exclusion',
-                'HUE': 'hue',
-                'SATURATION': 'saturation',
-                'COLOR': 'color',
-                'LUMINOSITY': 'luminosity'
-            }
-            if blend_mode in blend_map:
-                css['mix-blend-mode'] = blend_map[blend_mode]
+        # Root frame
+        if node_type == 'FRAME' and not parent:
+            css['position'] = 'relative'
+            css['overflow'] = 'hidden'
         
         return css
     
@@ -520,7 +463,6 @@ class FigmaToHTMLConverter:
         if not node.get('visible', True):
             return '', {}
         
-        # Skip text children of buttons/inputs
         if self.should_skip_node(node, parent):
             return '', {}
         
@@ -533,7 +475,7 @@ class FigmaToHTMLConverter:
         html = ''
         indent = '  ' * depth
         
-        # === TEXT NODES ===
+        # TEXT NODES
         if node_type == 'TEXT':
             text = node.get('characters', '')
             
@@ -555,9 +497,8 @@ class FigmaToHTMLConverter:
                 
                 html = f'{indent}<{tag} class="{class_name}">{text}</{tag}>'
         
-        # === CONTAINER NODES ===
+        # CONTAINER NODES
         elif node_type in ['FRAME', 'GROUP', 'COMPONENT', 'INSTANCE']:
-            # Check if it's an input
             if self.is_likely_input(node):
                 text = self.get_text_content(node)
                 text_lower = text.lower()
@@ -571,24 +512,21 @@ class FigmaToHTMLConverter:
                 else:
                     html = f'{indent}<input type="text" class="{class_name}" placeholder="{text}">'
             
-            # Check if it's a button
             elif self.is_likely_button(node):
                 text = self.get_text_content(node)
                 
-                # Get text styles from children for button content styling
                 text_styles = self.get_text_styles_from_children(node)
                 if text_styles and 'color' in text_styles:
-                    # Add text color to button CSS
                     all_css[class_name]['color'] = text_styles['color']
                 
                 html = f'{indent}<button class="{class_name}">{text}</button>'
             
-            # Regular container
             else:
                 children = node.get('children', [])
                 children_html = []
                 
                 for child in children:
+                    child['parent'] = node
                     child_html, child_css = self.generate_html(child, node, depth + 1)
                     if child_html:
                         children_html.append(child_html)
@@ -600,7 +538,7 @@ class FigmaToHTMLConverter:
                 else:
                     html = f'{indent}<div class="{class_name}"></div>'
         
-        # === SHAPE NODES ===
+        # SHAPE NODES
         elif node_type in ['RECTANGLE', 'ELLIPSE', 'VECTOR', 'LINE', 'POLYGON', 'STAR']:
             html = f'{indent}<div class="{class_name}"></div>'
         
@@ -624,6 +562,7 @@ body {
     align-items: center;
     min-height: 100vh;
     padding: 20px;
+    zoom: 0.75; /* Scale down to 75% for better viewport fit */
 }
 """)
         
@@ -633,7 +572,6 @@ body {
             
             lines.append(f".{class_name} {{")
             
-            # Order CSS properties logically
             prop_order = [
                 'position', 'display', 'flex-direction', 'flex', 'flex-grow',
                 'width', 'height', 'left', 'top', 'right', 'bottom',
@@ -654,6 +592,11 @@ body {
 input {
     outline: none;
     font-family: inherit;
+    background: transparent;
+}
+
+input::placeholder {
+    color: #C0C0C0;
 }
 
 input:focus {
@@ -687,6 +630,7 @@ a:hover {
 @media (max-width: 420px) {
     body {
         padding: 10px;
+        zoom: 1; /* Reset zoom on mobile */
     }
     [class*="frame"], [class*="container"] {
         width: 100% !important;
