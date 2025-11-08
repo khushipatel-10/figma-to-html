@@ -1,12 +1,11 @@
 """
-Figma to HTML/CSS Converter 
-Fixed: class name conflicts, input detection, structure, text colors
+Updated Figma to HTML/CSS Converter 
+
 """
 
 import requests
 import json
 import re
-import math
 from typing import Dict, List, Any, Optional, Tuple
 
 
@@ -19,17 +18,16 @@ class FigmaToHTMLConverter:
         
         self.fonts = set()
         self.used_class_names = set()
-        self.component_counter = 0
         
     def fetch_file(self) -> Dict:
-        """Fetch the Figma file data"""
+        """Fetch the Figma file JSON data"""
         url = f"{self.base_url}/files/{self.file_key}"
         response = requests.get(url, headers=self.headers)
         response.raise_for_status()
         return response.json()
     
     def rgba_to_css(self, color: Dict) -> str:
-        """Convert Figma RGBA to CSS"""
+        """Convert Figma RGBA to CSS color"""
         if not color:
             return "transparent"
         
@@ -39,148 +37,235 @@ class FigmaToHTMLConverter:
         a = color.get('a', 1)
         
         if a == 1:
-            return f"#{r:02x}{g:02x}{b:02x}"
+            return f"#{r:02X}{g:02X}{b:02X}"
         return f"rgba({r}, {g}, {b}, {a})"
     
-    def extract_gradient(self, fill: Dict) -> Optional[str]:
-        """Improved gradient extraction."""
+    def extract_gradient_css(self, fill: Dict) -> Optional[str]:
+        """Extract gradient CSS from Figma gradient data"""
         if fill.get('type') != 'GRADIENT_LINEAR':
             return None
-
+        
         stops = fill.get('gradientStops', [])
         if not stops:
             return None
-
+        
         handles = fill.get('gradientHandlePositions', [])
         if len(handles) >= 2:
+            import math
             x1, y1 = handles[0]['x'], handles[0]['y']
             x2, y2 = handles[1]['x'], handles[1]['y']
-            rad = math.atan2(y2 - y1, x2 - x1)
-            deg = (math.degrees(rad) + 450) % 360  # fix rotation offset
+            
+            dx = x2 - x1
+            dy = y2 - y1
+            
+            rad = math.atan2(dy, dx)
+            deg = math.degrees(rad)
+            css_angle = (90 - deg) % 360
         else:
-            deg = 90
-
+            css_angle = 180
+        
         gradient_stops = []
         for stop in stops:
             color = self.rgba_to_css(stop['color'])
-            pos = int(stop.get('position', 0) * 100)
-            gradient_stops.append(f"{color} {pos}%")
-
-        return f"linear-gradient({deg:.0f}deg, {', '.join(gradient_stops)})"
-
+            pos = stop.get('position', 0) * 100
+            gradient_stops.append(f"{color} {pos:.2f}%")
+        
+        return f"linear-gradient({css_angle:.2f}deg, {', '.join(gradient_stops)})"
     
-    def get_background(self, node: Dict) -> str:
-        """Get background CSS"""
-        fills = node.get('fills', [])
+    def get_unique_class_name(self, base_name: str) -> str:
+        """Generate unique class name"""
+        # Clean the name
+        clean = re.sub(r'[^a-z0-9-]', '-', base_name.lower())
+        clean = re.sub(r'-+', '-', clean).strip('-')
+        
+        if not clean or clean[0].isdigit():
+            clean = f"node-{clean}"
+        
+        # Make unique
+        if clean not in self.used_class_names:
+            self.used_class_names.add(clean)
+            return clean
+        
+        counter = 2
+        while f"{clean}-{counter}" in self.used_class_names:
+            counter += 1
+        
+        final_name = f"{clean}-{counter}"
+        self.used_class_names.add(final_name)
+        return final_name
+    
+    def get_semantic_class(self, node: Dict, parent: Dict = None) -> str:
+        """Generate semantic class name based on node properties"""
+        name = node.get('name', '')
+        node_type = node.get('type', '')
+        node_id = node.get('id', '')
+        
+        # Special cases based on content and structure
+        text_content = self.get_text_content(node).lower()
+        
+        # Check specific patterns
+        if 'home indicator' in name.lower():
+            if node_type == 'RECTANGLE':
+                return self.get_unique_class_name('home-indicator-bar')
+            return self.get_unique_class_name('home-indicator')
+        
+        if self.should_be_button(node):
+            if 'sign in' in text_content:
+                return self.get_unique_class_name('sign-in-button')
+            elif 'create' in text_content:
+                return self.get_unique_class_name('create-account-button')
+            return self.get_unique_class_name('button')
+        
+        if self.should_be_input(node):
+            if 'password' in text_content:
+                return self.get_unique_class_name('password-input')
+            elif '@' in text_content:
+                return self.get_unique_class_name('email-input')
+            return self.get_unique_class_name('input')
+        
+        if node_type == 'TEXT':
+            if 'sign in' in text_content and len(text_content) < 15:
+                return self.get_unique_class_name('sign-in-heading')
+            elif 'forgot' in text_content:
+                return self.get_unique_class_name('forgot-password-link')
+            elif 'create account' in text_content:
+                return self.get_unique_class_name('create-account-text')
+            return self.get_unique_class_name('text')
+        
+        # Check if it's a container for inputs
+        if node_type == 'FRAME' and node.get('layoutMode') == 'VERTICAL':
+            children = node.get('children', [])
+            if len(children) >= 2 and all(self.should_be_input(c) for c in children[:2]):
+                return self.get_unique_class_name('input-group')
+        
+        # Use node name or ID
+        if name:
+            return self.get_unique_class_name(name)
+        
+        return self.get_unique_class_name(f"node-{node_id.replace(':', '-')}")
+    
+    def should_be_input(self, node: Dict) -> bool:
+        """Check if node should be rendered as input"""
+        if node.get('type') != 'FRAME':
+            return False
+        
+        # Must have border
+        strokes = node.get('strokes', [])
+        if not strokes or not any(s.get('visible', True) for s in strokes):
+            return False
+        
+        # Must have layout mode
+        if not node.get('layoutMode'):
+            return False
+        
+        # Must have text child
+        text = self.get_text_content(node)
+        if not text:
+            return False
+        
+        # Size check
+        bounds = node.get('absoluteBoundingBox', {})
+        height = bounds.get('height', 999)
+        width = bounds.get('width', 0)
+        
+        return height <= 100 and width > 100
+    
+    def should_be_button(self, node: Dict) -> bool:
+        """Check if node should be rendered as button"""
+        if node.get('type') != 'FRAME':
+            return False
+        
+        # Must have background
+        fills = node.get('fills', []) or node.get('background', [])
         visible_fills = [f for f in fills if f.get('visible', True)]
         
         if not visible_fills:
-            return "transparent"
+            return False
         
-        fill = visible_fills[0]
+        # Check for gradient or solid background
+        has_gradient = any(f.get('type') == 'GRADIENT_LINEAR' for f in visible_fills)
         
-        if fill['type'] == 'SOLID':
-            return self.rgba_to_css(fill.get('color'))
-        elif fill['type'] == 'GRADIENT_LINEAR':
-            gradient = self.extract_gradient(fill)
-            return gradient if gradient else "transparent"
-        
-        return "transparent"
-    
-    def get_border_css(self, node: Dict) -> Optional[str]:
-        """Get border CSS"""
-        strokes = node.get('strokes', [])
-        visible_strokes = [s for s in strokes if s.get('visible', True)]
-        
-        if not visible_strokes:
-            return None
-        
-        stroke_weight = node.get('strokeWeight', 0)
-        if stroke_weight == 0:
-            return None
-        
-        
-        stroke_color = self.rgba_to_css(visible_strokes[0].get('color'))
-        return f"{stroke_weight}px solid {stroke_color}"
-    
-
-    
-    def get_border_radius(self, node: Dict) -> str:
-        """Get border radius CSS"""
+        # High border radius indicates button
         radius = node.get('cornerRadius', 0)
-        corners = node.get('rectangleCornerRadii', [])
         
-        if corners and len(corners) == 4:
-            if all(c == corners[0] for c in corners):
-                return f"{corners[0]}px" if corners[0] > 0 else "0"
-            return f"{corners[0]}px {corners[1]}px {corners[2]}px {corners[3]}px"
+        # Must have text
+        text = self.get_text_content(node)
+        if not text:
+            return False
         
-        return f"{radius}px" if radius > 0 else "0"
-    
-    def get_text_style(self, node: Dict) -> Dict[str, str]:
-        style = node.get('style', {})
-        fills = node.get('fills', [])
-
-        color = "#000"
-        if fills and fills[0].get('visible', True):
-            color = self.rgba_to_css(fills[0].get('color'))
-
-        css = {
-            'font-family': f"'{style.get('fontFamily', 'Inter')}', sans-serif",
-            'font-size': f"{style.get('fontSize', 16)}px",
-            'font-weight': str(style.get('fontWeight', 400)),
-            'color': color,
-            'line-height': f"{style.get('lineHeightPx', style.get('fontSize', 16)*1.2)}px",
-        }
-
-        if 'textAlignHorizontal' in style:
-            align_map = {'CENTER': 'center', 'RIGHT': 'right', 'LEFT': 'left'}
-            css['text-align'] = align_map.get(style['textAlignHorizontal'], 'left')
-
-        if 'letterSpacing' in style:
-            css['letter-spacing'] = f"{style['letterSpacing']}px"
-
-        if 'paragraphSpacing' in style and style['paragraphSpacing'] > 0:
-            css['margin-bottom'] = f"{style['paragraphSpacing']}px"
-
-        return css
-
-    
-    def get_layout_css(self, node: Dict) -> Dict[str, str]:
-        """Get layout CSS"""
-        css = {}
-        
+        # Size check
         bounds = node.get('absoluteBoundingBox', {})
-        width = bounds.get('width')
-        height = bounds.get('height')
+        height = bounds.get('height', 0)
+        width = bounds.get('width', 0)
         
-        if width:
-            css['width'] = f"{width}px"
-        if height:
-            css['height'] = f"{height}px"
+        # Button-like dimensions and styling
+        return (has_gradient or radius >= 20) and 30 <= height <= 80 and width > 100
+    
+    def get_text_content(self, node: Dict) -> str:
+        """Get text content from node"""
+        if node.get('type') == 'TEXT':
+            return node.get('characters', '')
         
-        pt = node.get('paddingTop', 0)
-        pr = node.get('paddingRight', 0)
-        pb = node.get('paddingBottom', 0)
-        pl = node.get('paddingLeft', 0)
+        for child in node.get('children', []):
+            text = self.get_text_content(child)
+            if text:
+                return text
         
-        if any([pt, pr, pb, pl]):
-            if pt == pr == pb == pl:
-                css['padding'] = f"{pt}px"
-            else:
-                css['padding'] = f"{pt}px {pr}px {pb}px {pl}px"
+        return ''
+    
+    def extract_styles(self, node: Dict, parent: Dict = None) -> Dict[str, str]:
+        """Extract CSS styles from Figma node"""
+        css = {}
+        node_type = node.get('type')
+        bounds = node.get('absoluteBoundingBox', {})
         
+        # Determine positioning
+        parent_layout = parent.get('layoutMode') if parent else None
+        
+        if parent_layout in ['HORIZONTAL', 'VERTICAL']:
+            # Child in auto-layout
+            css['display'] = 'flex'
+            
+            layout_sizing_h = node.get('layoutSizingHorizontal', 'FIXED')
+            layout_sizing_v = node.get('layoutSizingVertical', 'FIXED')
+            
+            if layout_sizing_h == 'FILL':
+                css['align-self'] = 'stretch'
+            elif layout_sizing_h == 'HUG':
+                css['width'] = 'fit-content'
+            elif bounds.get('width'):
+                css['width'] = f"{bounds['width']}px"
+            
+            if layout_sizing_v == 'FIXED' and bounds.get('height'):
+                css['height'] = f"{bounds['height']}px"
+            elif layout_sizing_v == 'HUG':
+                css['height'] = 'fit-content'
+            
+            css['flex'] = 'none'
+            css['order'] = '0'
+        else:
+            # Absolute positioning
+            if node_type not in ['TEXT'] or not parent_layout:
+                css['position'] = 'absolute'
+                
+                if parent:
+                    parent_bounds = parent.get('absoluteBoundingBox', {})
+                    css['left'] = f"{bounds.get('x', 0) - parent_bounds.get('x', 0)}px"
+                    css['top'] = f"{bounds.get('y', 0) - parent_bounds.get('y', 0)}px"
+                
+                if bounds.get('width'):
+                    css['width'] = f"{bounds['width']}px"
+                if bounds.get('height'):
+                    css['height'] = f"{bounds['height']}px"
+        
+        # Auto-layout properties
         layout_mode = node.get('layoutMode')
         if layout_mode in ['HORIZONTAL', 'VERTICAL']:
             css['display'] = 'flex'
-            css['flex-direction'] = 'column' if layout_mode == 'VERTICAL' else 'row'
+            css['flex-direction'] = 'row' if layout_mode == 'HORIZONTAL' else 'column'
             
-            gap = node.get('itemSpacing', 0)
-            if gap > 0:
-                css['gap'] = f"{gap}px"
-            
-            primary = node.get('primaryAxisAlignItems', 'MIN')
-            counter = node.get('counterAxisAlignItems', 'MIN')
+            counter_align = node.get('counterAxisAlignItems', 'MIN')
+            primary_align = node.get('primaryAxisAlignItems', 'MIN')
             
             align_map = {
                 'MIN': 'flex-start',
@@ -189,310 +274,219 @@ class FigmaToHTMLConverter:
                 'SPACE_BETWEEN': 'space-between'
             }
             
-            css['align-items'] = align_map.get(counter, 'flex-start')
-            css['justify-content'] = align_map.get(primary, 'flex-start')
-
-            if node.get('layoutMode') is None:
-                # Try to infer centering from absolute bounding boxes
-                if node.get('absoluteBoundingBox'):
-                    abs_box = node['absoluteBoundingBox']
-                    if abs_box.get('x', 0) > 0:
-                        css['margin-left'] = f"{abs_box['x']}px"
-                    if abs_box.get('y', 0) > 0:
-                        css['margin-top'] = f"{abs_box['y']}px"
+            css['align-items'] = align_map.get(counter_align, 'flex-start')
+            css['justify-content'] = align_map.get(primary_align, 'flex-start')
+            
+            # Padding
+            pt = node.get('paddingTop', 0)
+            pr = node.get('paddingRight', 0)
+            pb = node.get('paddingBottom', 0)
+            pl = node.get('paddingLeft', 0)
+            
+            if any([pt, pr, pb, pl]):
+                css['padding'] = f"{pt}px {pr}px {pb}px {pl}px"
+            
+            # Gap
+            gap = node.get('itemSpacing', 0)
+            if gap > 0:
+                css['gap'] = f"{gap}px"
         
-        return css
-    
-    def get_all_text_from_children(self, node: Dict) -> List[str]:
-        """Get all text content from children"""
-        texts = []
-        for child in node.get('children', []):
-            if child.get('type') == 'TEXT':
-                texts.append(child.get('characters', ''))
-        return texts
-    
-    def is_input_container(self, node: Dict) -> Tuple[bool, str, str, bool]:
-        """
-        Check if this frame should be converted to an input
-        Returns: (is_input, type, text, is_value)
-        """
-        # Get dimensions
-        bounds = node.get('absoluteBoundingBox', {})
-        height = bounds.get('height', 999)
-        width = bounds.get('width', 0)
-        
-        # Must be input-sized (not too large)
-        if height > 100 or width < 100:
-            return False, '', '', False
-        
-        # Must have border (inputs have borders)
-        if not self.get_border_css(node):
-            return False, '', '', False
-        
-        # Get text content
-        texts = self.get_all_text_from_children(node)
-        if not texts or len(texts) != 1:
-            return False, '', '', False
-        
-        text = texts[0]
-        text_lower = text.lower()
-        
-        # Check for password
-        if 'password' in text_lower:
-            return True, 'password', 'Password', False
-        
-        # Check for email (has @)
-        if '@' in text:
-            return True, 'email', text, True
-        
-        # Check for other input patterns
-        if any(word in text_lower for word in ['email', 'username', 'search']):
-            return True, 'text', text, False
-        
-        return False, '', '', False
-    
-    def is_button_container(self, node: Dict) -> Tuple[bool, str]:
-        """
-        Check if this frame should be a button
-        Returns: (is_button, button_text)
-        """
-        # Get background - buttons have backgrounds
-        bg = self.get_background(node)
-        if bg == "transparent":
-            return False, ''
-        
-        # Get dimensions
-        bounds = node.get('absoluteBoundingBox', {})
-        height = bounds.get('height', 0)
-        width = bounds.get('width', 0)
-        
-        # Button-like size
-        if not (30 <= height <= 80 and width > 100):
-            return False, ''
-        
-        # Must have high border radius
-        radius = node.get('cornerRadius', 0)
-        if radius < 30:  # Buttons typically have high radius
-            return False, ''
-        
-        # Get text
-        texts = self.get_all_text_from_children(node)
-        if not texts or len(texts) != 1:
-            return False, ''
-        
-        text = texts[0]
-        
-        # Check for button-like text
-        text_lower = text.lower()
-        if any(word in text_lower for word in ['sign', 'create', 'submit', 'continue', 'next', 'back']):
-            return True, text
-        
-        return False, ''
-    
-    def is_link_text(self, node: Dict) -> bool:
-        """Check if TEXT node should be a link"""
-        if node.get('type') != 'TEXT':
-            return False
-        
-        text = node.get('characters', '').lower()
-        style = node.get('style', {})
-        font_size = style.get('fontSize', 16)
-        
-        # Small text with link-like content
-        if font_size <= 14 and any(word in text for word in ['forgot', 'help', 'learn', 'more info']):
-            return True
-        
-        return False
-    
-    def get_heading_level(self, node: Dict) -> Optional[str]:
-        """Determine if TEXT should be a heading"""
-        if node.get('type') != 'TEXT':
-            return None
-        
-        style = node.get('style', {})
-        font_size = style.get('fontSize', 16)
-        font_weight = style.get('fontWeight', 400)
-        
-        # Large, bold text = heading
-        if font_size >= 40 and font_weight >= 700:
-            return 'h1'
-        elif font_size >= 28 and font_weight >= 600:
-            return 'h2'
-        elif font_size >= 20 and font_weight >= 600:
-            return 'h3'
-        
-        return None
-    
-    def generate_unique_class_name(self, node: Dict) -> str:
-        """
-        Generate semantic class names using node roles.
-        """
-        name = node.get('name', '').lower()
-        node_type = node.get('type', '').lower()
-
-        # Base heuristic names
-        if 'button' in name:
-            base = 'button'
-        elif 'input' in name or 'field' in name:
-            base = 'input'
-        elif 'frame' in name and 'phone' in name:
-            base = 'phone-frame'
-        elif 'text' in name or node_type == 'text':
-            base = 'text'
-        elif 'icon' in name:
-            base = 'icon'
-        elif 'card' in name:
-            base = 'card'
-        elif 'container' in name:
-            base = 'container'
-        else:
-            base = node_type or 'layer'
-
-        # Normalize
-        base = re.sub(r'[^a-z0-9-]', '-', base).strip('-')
-        if not base:
-            base = 'component'
-
-        # Ensure uniqueness
-        counter = 1
-        new_name = base
-        while new_name in self.used_class_names:
-            new_name = f"{base}-{counter}"
-            counter += 1
-
-        self.used_class_names.add(new_name)
-        return new_name
-
-    
-    def collect_styles(self, node: Dict) -> Dict[str, str]:
-        """Collect CSS styles for node"""
-        css = {}
-        node_type = node.get('type')
-        
-        # Background (for containers, not text)
+        # Background
         if node_type != 'TEXT':
-            bg = self.get_background(node)
-            if bg != "transparent":
-                css['background'] = bg
-
-        # Extract drop shadow
-        effects = node.get('effects', [])
-        visible_effects = [e for e in effects if e.get('visible', True) and e.get('type') == 'DROP_SHADOW']
-        if visible_effects:
-            shadow = visible_effects[0]
-            color = self.rgba_to_css(shadow.get('color'))
-            offset = shadow.get('offset', {})
-            blur = shadow.get('radius', 0)
-            css['box-shadow'] = f"{offset.get('x', 0)}px {offset.get('y', 0)}px {blur}px {color}"
+            fills = node.get('fills', []) or node.get('background', [])
+            visible_fills = [f for f in fills if f.get('visible', True)]
+            
+            if visible_fills:
+                fill = visible_fills[0]
+                if fill['type'] == 'SOLID':
+                    css['background'] = self.rgba_to_css(fill.get('color', {}))
+                elif fill['type'] == 'GRADIENT_LINEAR':
+                    gradient = self.extract_gradient_css(fill)
+                    if gradient:
+                        css['background'] = gradient
         
         # Border
-        border = self.get_border_css(node)
-        if border:
-            css['border'] = border
+        strokes = node.get('strokes', [])
+        visible_strokes = [s for s in strokes if s.get('visible', True)]
+        
+        if visible_strokes:
+            stroke_weight = node.get('strokeWeight', 0)
+            if stroke_weight > 0:
+                stroke_color = self.rgba_to_css(visible_strokes[0].get('color', {}))
+                css['border'] = f"{stroke_weight}px solid {stroke_color}"
         
         # Border radius
-        radius = self.get_border_radius(node)
-        if radius != "0":
-            css['border-radius'] = radius
+        corners = node.get('rectangleCornerRadii', [])
+        if corners and len(corners) == 4:
+            if all(c == corners[0] for c in corners):
+                if corners[0] > 0:
+                    css['border-radius'] = f"{corners[0]}px"
+            else:
+                css['border-radius'] = f"{corners[0]}px {corners[1]}px {corners[2]}px {corners[3]}px"
+        else:
+            radius = node.get('cornerRadius', 0)
+            if radius > 0:
+                css['border-radius'] = f"{radius}px"
         
-        # Layout
-        layout_css = self.get_layout_css(node)
-        css.update(layout_css)
-        
-        # Text styles (COLOR, not background)
+        # Text styles
         if node_type == 'TEXT':
-            text_css = self.get_text_style(node)
-            css.update(text_css)
+            style = node.get('style', {})
+            
+            font_family = style.get('fontFamily', 'Inter')
+            self.fonts.add(font_family)
+            
+            css['font-family'] = f"'{font_family}'"
+            css['font-style'] = 'normal'
+            css['font-weight'] = str(style.get('fontWeight', 400))
+            css['font-size'] = f"{style.get('fontSize', 16)}px"
+            
+            # Line height
+            line_height_unit = style.get('lineHeightUnit', 'AUTO')
+            if line_height_unit == 'PIXELS':
+                css['line-height'] = f"{style.get('lineHeightPx')}px"
+            elif line_height_unit == 'FONT_SIZE_%':
+                percent = style.get('lineHeightPercentFontSize', 100)
+                css['line-height'] = f"{int(percent)}%"
+            
+            if not css.get('display'):
+                css['display'] = 'flex'
+            css['align-items'] = 'center'
+            
+            # Text align
+            text_align = style.get('textAlignHorizontal', 'LEFT')
+            align_map = {'LEFT': 'left', 'CENTER': 'center', 'RIGHT': 'right', 'JUSTIFIED': 'justify'}
+            css['text-align'] = align_map.get(text_align, 'left')
+            
+            # Letter spacing
+            if 'letterSpacing' in style:
+                css['letter-spacing'] = f"{style['letterSpacing']}px"
+            
+            # Color
+            fills = node.get('fills', [])
+            if fills:
+                visible_fills = [f for f in fills if f.get('visible', True)]
+                if visible_fills:
+                    fill = visible_fills[0]
+                    opacity = fill.get('opacity', 1)
+                    color = fill.get('color', {})
+                    
+                    if opacity < 1:
+                        r = int(color.get('r', 0) * 255)
+                        g = int(color.get('g', 0) * 255)
+                        b = int(color.get('b', 0) * 255)
+                        css['color'] = f"rgba({r}, {g}, {b}, {opacity})"
+                    else:
+                        css['color'] = self.rgba_to_css(color)
+        
+        # Effects
+        effects = node.get('effects', [])
+        visible_effects = [e for e in effects if e.get('visible', True)]
+        
+        for effect in visible_effects:
+            if effect.get('type') == 'DROP_SHADOW':
+                color = self.rgba_to_css(effect.get('color', {}))
+                offset = effect.get('offset', {})
+                blur = effect.get('radius', 0)
+                x = offset.get('x', 0)
+                y = offset.get('y', 0)
+                css['box-shadow'] = f"{x}px {y}px {blur}px {color}"
+            elif effect.get('type') == 'BACKGROUND_BLUR':
+                radius = effect.get('radius', 10)
+                css['backdrop-filter'] = f"blur({radius}px)"
         
         # Opacity
         opacity = node.get('opacity', 1)
         if opacity < 1:
             css['opacity'] = str(opacity)
         
-        # Position relative for non-auto-layout containers with children
-        if node_type in ['FRAME', 'GROUP'] and not node.get('layoutMode'):
-            if len(node.get('children', [])) > 1:
-                css['position'] = 'relative'
+        # Clip content
+        if node.get('clipsContent', False):
+            css['overflow'] = 'hidden'
         
         return css
     
-    def traverse_and_generate(self, node: Dict, depth: int = 0) -> Tuple[str, Dict]:
-        """
-        Traverse and generate HTML/CSS
-        Returns: (html, css_dict)
-        """
+    def generate_html(self, node: Dict, parent: Dict = None, depth: int = 0) -> Tuple[str, Dict]:
+        """Generate HTML and CSS for node"""
         if not node.get('visible', True):
             return '', {}
         
         node_type = node.get('type')
-        class_name = self.generate_unique_class_name(node)
+        class_name = self.get_semantic_class(node, parent)
         
-        # Collect styles
-        css_rules = self.collect_styles(node)
-        all_css = {class_name: css_rules} if css_rules else {}
+        # Extract styles
+        css = self.extract_styles(node, parent)
+        all_css = {class_name: css} if css else {}
         
         html = ''
+        indent = '  ' * depth
         
         # Handle TEXT nodes
         if node_type == 'TEXT':
             text = node.get('characters', '')
             
             # Check if link
-            if self.is_link_text(node):
-                html = f'<a href="#" class="{class_name}">{text}</a>'
+            if any(word in text.lower() for word in ['forgot', 'learn', 'help']):
+                html = f'{indent}<a href="#" class="{class_name}">{text}</a>'
             else:
-                # Check if heading
-                heading = self.get_heading_level(node)
-                if heading:
-                    html = f'<{heading} class="{class_name}">{text}</{heading}>'
+                # Determine tag
+                style = node.get('style', {})
+                font_size = style.get('fontSize', 16)
+                font_weight = style.get('fontWeight', 400)
+                
+                if font_size >= 40 and font_weight >= 700:
+                    tag = 'h1'
+                elif font_size >= 24:
+                    tag = 'h2'
                 else:
-                    html = f'<span class="{class_name}">{text}</span>'
+                    tag = 'p'
+                
+                html = f'{indent}<{tag} class="{class_name}">{text}</{tag}>'
         
-        # Handle container nodes
-        elif node_type in ['FRAME', 'GROUP', 'COMPONENT', 'INSTANCE', 'RECTANGLE']:
+        # Handle containers
+        elif node_type in ['FRAME', 'GROUP', 'COMPONENT', 'INSTANCE']:
             # Check if input
-            is_input, input_type, input_text, is_value = self.is_input_container(node)
-            if is_input:
-                attrs = [f'class="{class_name}"', f'type="{input_type}"']
-                if is_value:
-                    attrs.append(f'value="{input_text}"')
+            if self.should_be_input(node):
+                text = self.get_text_content(node)
+                if 'password' in text.lower():
+                    html = f'{indent}<input type="password" class="{class_name}" placeholder="{text}">'
+                elif '@' in text:
+                    html = f'{indent}<input type="email" class="{class_name}" value="{text}">'
                 else:
-                    attrs.append(f'placeholder="{input_text}"')
-                return f'<input {" ".join(attrs)}>', all_css
+                    html = f'{indent}<input type="text" class="{class_name}" placeholder="{text}">'
             
             # Check if button
-            is_button, button_text = self.is_button_container(node)
-            if is_button:
-                return f'<button class="{class_name}">{button_text}</button>', all_css
+            elif self.should_be_button(node):
+                text = self.get_text_content(node)
+                html = f'{indent}<button class="{class_name}">{text}</button>'
             
-            # Regular container - process children
-            children = node.get('children', [])
-            children_html = []
-            
-            for child in children:
-                child_html, child_css = self.traverse_and_generate(child, depth + 1)
-                if child_html:
-                    children_html.append(child_html)
-                all_css.update(child_css)
-
-            if class_name.startswith('input') or class_name.startswith('button'):
-                wrapper_tag = 'div'
-                html = f'<{wrapper_tag} class="{class_name}">\n{indent}{children_str}\n{"  " * depth}</{wrapper_tag}>'
-    
-            # Build HTML
-            if children_html:
-                indent = '  ' * (depth + 1)
-                children_str = f'\n{indent}'.join(children_html)
-                html = f'<div class="{class_name}">\n{indent}{children_str}\n{"  " * depth}</div>'
+            # Regular container
             else:
-                html = f'<div class="{class_name}"></div>'
+                children = node.get('children', [])
+                children_html = []
+                
+                for child in children:
+                    child_html, child_css = self.generate_html(child, node, depth + 1)
+                    if child_html:
+                        children_html.append(child_html)
+                    all_css.update(child_css)
+                
+                if children_html:
+                    children_str = '\n'.join(children_html)
+                    html = f'{indent}<div class="{class_name}">\n{children_str}\n{indent}</div>'
+                else:
+                    html = f'{indent}<div class="{class_name}"></div>'
+        
+        # Handle shapes
+        elif node_type in ['RECTANGLE', 'ELLIPSE', 'VECTOR']:
+            html = f'{indent}<div class="{class_name}"></div>'
         
         return html, all_css
     
-    def css_dict_to_string(self, css_dict: Dict[str, Dict[str, str]]) -> str:
-        """Convert CSS dict to string"""
+    def css_to_string(self, css_dict: Dict[str, Dict[str, str]]) -> str:
+        """Convert CSS dictionary to string"""
         lines = []
         
+        # Reset
         lines.append("""* {
     margin: 0;
     padding: 0;
@@ -510,78 +504,76 @@ body {
 }
 """)
         
-        for class_name, props in css_dict.items():
+        # Component styles
+        for class_name, props in sorted(css_dict.items()):
             if not props:
                 continue
             
             lines.append(f".{class_name} {{")
+            
+            # Property order for readability
+            prop_order = ['position', 'display', 'flex-direction', 'width', 'height', 
+                         'left', 'top', 'right', 'bottom']
+            
+            for prop in prop_order:
+                if prop in props:
+                    lines.append(f"    {prop}: {props[prop]};")
+            
             for prop, value in sorted(props.items()):
-                lines.append(f"    {prop}: {value};")
+                if prop not in prop_order:
+                    lines.append(f"    {prop}: {value};")
+            
             lines.append("}\n")
         
-        lines.append("""
+        # Interactive states
+        lines.append("""/* Interactive states */
 input {
     outline: none;
     font-family: inherit;
 }
 
+input::placeholder {
+    color: #C0C0C0;
+}
+
 input:focus {
-    border-color: #95228C;
+    border-color: #4A90E2;
 }
 
 button {
+    border: none;
     cursor: pointer;
-    transition: transform 0.2s, opacity 0.2s;
+    transition: all 0.2s;
 }
 
 button:hover {
-    opacity: 0.9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 button:active {
-    transform: scale(0.98);
+    transform: translateY(0);
 }
 
 a {
     text-decoration: none;
+    transition: opacity 0.2s;
 }
 
 a:hover {
-    opacity: 0.8;
-}
-""")
-
-        lines.append("""
-@media (max-width: 420px) {
-    body {
-        padding: 10px;
-    }
-    [class*="frame"], [class*="container"], [class*="phone-frame"] {
-        width: 100%;
-        max-width: 393px;
-        height: auto;
-        min-height: 852px;
-    }
+    opacity: 0.7;
 }
 """)
         
         return '\n'.join(lines)
     
-    def generate_google_fonts_link(self) -> str:
-        """Generate Google Fonts link"""
+    def generate_html_doc(self, body_html: str, css: str) -> str:
+        """Generate complete HTML document"""
         if not self.fonts:
             self.fonts.add('Inter')
         
-        fonts_param = []
-        for font in self.fonts:
-            fonts_param.append(f"{font.replace(' ', '+')}:wght@400;500;600;700")
-        
-        fonts_str = '&family='.join(fonts_param)
-        return f'<link href="https://fonts.googleapis.com/css2?family={fonts_str}&display=swap" rel="stylesheet">'
-    
-    def generate_html_document(self, body_html: str, css: str) -> str:
-        """Generate complete HTML"""
-        google_fonts = self.generate_google_fonts_link()
+        fonts_param = '&family='.join([f"{font.replace(' ', '+')}:wght@400;500;600;700" 
+                                      for font in sorted(self.fonts)])
         
         return f"""<!DOCTYPE html>
 <html lang="en">
@@ -589,7 +581,7 @@ a:hover {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Figma Design</title>
-    {google_fonts}
+    <link href="https://fonts.googleapis.com/css2?family={fonts_param}&display=swap" rel="stylesheet">
     <style>
 {css}
     </style>
@@ -600,24 +592,25 @@ a:hover {
 </html>"""
     
     def convert(self, node_id: str = None, output_file: str = "output.html"):
-        """Convert Figma to HTML/CSS"""
+        """Main conversion method"""
         print("🔍 Fetching Figma file...")
         data = self.fetch_file()
         print(f"✅ File: {data.get('name', 'Unknown')}")
         
+        # Find target node
         document = data.get('document', {})
         canvas = document.get('children', [{}])[0]
         
-        target_node = None
         if node_id:
-            def find_node(node, target_id):
-                if node.get('id') == target_id:
-                    return node
-                for child in node.get('children', []):
+            def find_node(n, target_id):
+                if n.get('id') == target_id:
+                    return n
+                for child in n.get('children', []):
                     result = find_node(child, target_id)
                     if result:
                         return result
                 return None
+            
             target_node = find_node(canvas, node_id)
         else:
             frames = [c for c in canvas.get('children', []) if c.get('type') == 'FRAME']
@@ -628,24 +621,28 @@ a:hover {
         
         print(f"🎨 Converting: {target_node.get('name', 'Unnamed')}")
         
-        html_body, css_dict = self.traverse_and_generate(target_node)
-        css_string = self.css_dict_to_string(css_dict)
-        html_output = self.generate_html_document(html_body, css_string)
+        # Generate HTML and CSS
+        html_body, css_dict = self.generate_html(target_node)
+        css_string = self.css_to_string(css_dict)
+        html_doc = self.generate_html_doc(html_body, css_string)
         
+        # Write to file
         with open(output_file, 'w', encoding='utf-8') as f:
-            f.write(html_output)
+            f.write(html_doc)
         
         print(f"✅ Generated: {output_file}")
-        return html_output
+        print(f"📊 Classes: {len(css_dict)}, Fonts: {len(self.fonts)}")
+        
+        return html_doc
 
 
 def main():
     import sys
     
     if len(sys.argv) < 3:
-        print("Usage: python figma_to_html.py <FIGMA_TOKEN> <FILE_KEY> [NODE_ID] [OUTPUT_FILE]")
+        print("Usage: python figma_converter.py <FIGMA_TOKEN> <FILE_KEY> [NODE_ID] [OUTPUT_FILE]")
         print("\nExample:")
-        print("  python figma_to_html.py your-token MxMXpjiLPbdHlratvH0Wdy 0:1 output.html")
+        print("  python figma_converter.py figd_xxx MxMXpjiLPbdHlratvH0Wdy 1:75 output.html")
         sys.exit(1)
     
     token = sys.argv[1]
