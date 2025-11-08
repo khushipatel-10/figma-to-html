@@ -31,7 +31,8 @@ The converter extracts design data from Figma (frames, text, rectangles, gradien
     └── trial_2_old.html    
 ```
 
----
+<br>
+
 
 ## ⚙️ Installation
 
@@ -50,9 +51,10 @@ pip install -r requirements.txt
 
 *(This project uses the `requests` library to communicate with the Figma API.)*
 
----
+<br>
 
-## Configuration Setup
+
+## 👀 Configuration Setup
 
 Create a file named **`config.py`** in the project’s root directory and add these details:
 
@@ -85,9 +87,10 @@ These variables can be directly imported into the scripts:
 from config import FIGMA_TOKEN, FILE_KEY, NODE_ID, OUTPUT_FILE
 ```
 
----
+<br>
 
-## Running the Converter
+
+## 🏃🏻‍♀️ Running the Converter
 
 Once the token and file key are ready, run:
 
@@ -110,9 +113,9 @@ open output.html   # macOS
 start output.html  # Windows
 ```
 
----
+<br>
 
-## Main Script – `figma_to_html.py`
+## 👩🏻‍💻 Main Script – `figma_to_html.py`
 
 This is the **core logic** of the converter.
 
@@ -130,7 +133,8 @@ This is the **core logic** of the converter.
 
 The resulting HTML can be directly opened in a browser to view the visual layout.
 
----
+<br>
+
 
 ## `figma_to_json.py`
 
@@ -143,7 +147,8 @@ Run:
 python3 figma_to_json.py
 ```
 
----
+<br>
+
 
 ## `test_converter.py`
 
@@ -163,7 +168,8 @@ pytest test_converter.py
 
 If all tests pass, the HTML conversion logic is functioning correctly.
 
----
+<br>
+
 
 ## Example Outputs
 
@@ -172,9 +178,10 @@ If all tests pass, the HTML conversion logic is functioning correctly.
 * **`output.json`** → The raw JSON data fetched from the Figma API that serves as input to the converter.
 * **`Trial/` Folder** → A secondary test case used to evaluate the converter on another Figma mockup that included **images and SVGs**.
 
----
+<br>
 
-## Example Workflow
+
+## 🙌🏼 Example Workflow
 
 1. Configure your Figma credentials in `config.py`.
 2. Run the converter:
@@ -189,7 +196,8 @@ If all tests pass, the HTML conversion logic is functioning correctly.
    pytest test_converter.py
    ```
 
----
+<br>
+
 
 ## Requirements
 
