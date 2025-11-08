@@ -1,7 +1,7 @@
 # ✨ Figma to HTML Converter
 
 This project converts **Figma designs** into **HTML + CSS** automatically using the Figma REST API.
-It connects to Figma, fetches your design structure, and generates pixel-accurate, browser-ready code that reflects your mockup.
+It connects to Figma, fetches the design structure, and generates pixel-accurate, browser-ready code that reflects the mockup.
 
 ---
 
