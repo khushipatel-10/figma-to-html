@@ -20,7 +20,7 @@ class FigmaToHTMLConverter:
         self.fonts = set()
         self.used_class_names = set()
         self.images = {}  # Track image nodes and their URLs
-        self.vectors = {}  # Track vector nodes: {node_id: class_name}
+        self.vectors = {}  # Store vector node info for SVG fetching
         
     def fetch_file(self) -> Dict:
         """Fetch the Figma file JSON data"""
@@ -41,18 +41,42 @@ class FigmaToHTMLConverter:
         result = response.json()
         return result.get('images', {})
     
-    def fetch_svgs(self, node_ids: List[str]) -> Dict[str, str]:
+    # New method to fetch SVGs
+    def fetch_svg(self, node_id: str) -> Optional[str]:
+
         """Fetch SVG content from Figma API"""
-        if not node_ids:
-            return {}
+        url = f"{self.base_url}/images/{self.file_key}?ids={node_id}&format=svg"
+        try:
+            response = requests.get(url, headers=self.headers)
+            response.raise_for_status()
+            result = response.json()
+            
+            svg_url = result.get('images', {}).get(node_id)
+            if svg_url:
+                svg_response = requests.get(svg_url)
+                svg_response.raise_for_status()
+                return svg_response.text
+        except Exception as e:
+            print(f"Failed to fetch SVG for {node_id}: {e}")
         
-        ids_str = ','.join(node_ids)
-        url = f"{self.base_url}/images/{self.file_key}?ids={ids_str}&format=svg"
-        response = requests.get(url, headers=self.headers)
-        response.raise_for_status()
-        result = response.json()
-        return result.get('images', {})
-    
+        return None
+        # """Fetch multiple SVG URLs for given vector node IDs"""
+        # if not node_ids:
+        #     return {}
+
+        # # Convert dict keys (node IDs) to comma-separated string
+        # ids_str = ','.join(node_ids.keys())
+        # url = f"{self.base_url}/images/{self.file_key}?ids={ids_str}&format=svg"
+
+        # try:
+        #     response = requests.get(url, headers=self.headers)
+        #     response.raise_for_status()
+        #     result = response.json()
+        #     return result.get('images', {})  # Mapping {node_id: svg_url}
+        # except Exception as e:
+        #     print(f"Failed to fetch SVG URLs: {e}")
+        #     return {}
+        
     def rgba_to_css(self, color: Dict, opacity: float = None) -> str:
         """Convert Figma RGBA to CSS color"""
         if not color:
@@ -386,7 +410,7 @@ class FigmaToHTMLConverter:
                 css['gap'] = f"{gap}px"
         
         # BACKGROUND
-        if node_type != 'TEXT':
+        if node_type not in ['TEXT', 'VECTOR', 'LINE', 'ELLIPSE', 'POLYGON', 'STAR']:
             fills = node.get('fills', []) or node.get('background', [])
             visible_fills = [f for f in fills if f.get('visible', True)]
             
@@ -755,27 +779,37 @@ a:hover {
                             css_dict[class_name]['background-image'] = f"url('{actual_url}')"
                             print(f"  ✓ {class_name}: {image_ref}.png")
         
-        # Fetch SVGs for vectors
+       # Fetch SVGs for vectors
         svg_content = {}
         if self.vectors:
             print(f"🎨 Fetching {len(self.vectors)} SVG vectors...")
-            svg_urls = self.fetch_svgs(self.vectors)
-            
-            # Download SVG content
-            for node_id, svg_url in svg_urls.items():
-                try:
-                    svg_response = requests.get(svg_url)
-                    svg_response.raise_for_status()
-                    svg_content[node_id] = svg_response.text
+
+            for node_id, class_name in self.vectors.items():
+                svg_data = self.fetch_svg(node_id)
+                if svg_data:
+                    svg_content[node_id] = svg_data
                     print(f"  ✓ Downloaded SVG for node {node_id}")
-                except Exception as e:
-                    print(f"  ✗ Failed to download SVG: {e}")
-            
+                else:
+                    print(f"  ✗ Failed to fetch SVG for {node_id}")
+
             # Replace vector divs with inline SVG
-            for node_id, svg in svg_content.items():
-                # Find the div for this vector and replace with SVG
-                # This requires tracking the class name during HTML generation
-                pass  # TODO: Implement SVG injection
+            if svg_content:
+                print("🧩 Embedding SVGs into HTML...")
+
+                for node_id, svg in svg_content.items():
+                    class_name = self.vectors.get(node_id)
+                    if not class_name:
+                        continue
+
+                    svg_clean = svg.strip()
+                    svg_clean = re.sub(r'<svg ', f'<svg class="{class_name}" ', svg_clean, count=1)
+                    placeholder = f'<div class="{class_name}" data-node-id="{node_id}"></div>'
+                    html_body = html_body.replace(placeholder, svg_clean)
+
+                    print(f"  ✓ Embedded SVG for {class_name}")
+
+                print("✅ All SVGs embedded successfully.")
+
         
         css_string = self.css_to_string(css_dict)
         html_doc = self.generate_html_doc(html_body, css_string)
