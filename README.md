@@ -18,12 +18,12 @@ The converter extracts design data from Figma (frames, text, rectangles, gradien
 📁 Figma-to-HTML/
 │
 ├── figma_to_html.py        # Main script – converts Figma JSON data to HTML + CSS
-├── figma_to_json.py        # 
-├── test_converter.py       # 
+├── figma_to_json.py        
+├── test_converter.py        
 ├── main.html               # Final output – HTML/CSS generated from the given mockup
 ├── output.json             # (JSON) fetched from Figma API
-├── requirements.txt        # 
-├── .gitignore              # 
+├── requirements.txt         
+├── .gitignore               
 │
 └── Trial/                  # Used to test converter on a second mockup
     ├── Trial_2.png         
