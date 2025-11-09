@@ -198,7 +198,8 @@ If all tests pass, the HTML conversion logic is functioning correctly.
 
 <br>
 
-⚠️ Known Limitations
+##⚠️ Known Limitations
+
 Through testing and experimentation, a few patterns and challenges became clear while using the converter:
 
 
