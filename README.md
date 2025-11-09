@@ -198,26 +198,26 @@ If all tests pass, the HTML conversion logic is functioning correctly.
 
 <br>
 
-##⚠️ Known Limitations
+## ⚠️ Known Limitations
 
 Through testing and experimentation, a few patterns and challenges became clear while using the converter:
 
 
-Nested frames – When frames are deeply nested or overlapping, the structure doesn’t always translate perfectly into HTML. The parser currently handles one level at a time, so complex hierarchies may need manual adjustment afterward.
+* Nested frames – When frames are deeply nested or overlapping, the structure doesn’t always translate perfectly into HTML. The parser currently handles one level at a time, so complex hierarchies may need manual adjustment afterward.
 
 
-Multiple frames in a single Figma file – The tool works best when exporting one frame (NODE_ID) at a time. Running it on multiple frames in one project can sometimes produce inconsistent results.
+* Multiple frames in a single Figma file – The tool works best when exporting one frame (NODE_ID) at a time. Running it on multiple frames in one project can sometimes produce inconsistent results.
 
 
-Complex layouts and auto-layouts – Designs that rely heavily on Figma’s auto-layout, constraints, or mixed layout styles may show slight misalignments or spacing differences once converted.
+* Complex layouts and auto-layouts – Designs that rely heavily on Figma’s auto-layout, constraints, or mixed layout styles may show slight misalignments or spacing differences once converted.
 
 
-Images, SVGs, and gradients – While the converter supports these elements, advanced blending modes, masks, and detailed SVG paths aren’t fully replicated yet.
+* Images, SVGs, and gradients – While the converter supports these elements, advanced blending modes, masks, and detailed SVG paths aren’t fully replicated yet.
 
 
-Responsiveness – The generated HTML is static by default. For fully responsive behavior, additional CSS adjustments are required after conversion.
+* Responsiveness – The generated HTML is static by default. For fully responsive behavior, additional CSS adjustments are required after conversion.
 
-Human input – When the output of the converter is not producing accurate results, debugging through the dev tools and inspecting elements while altering their HTML/CSS is required to identify correct structure. 
+* Human input – When the output of the converter is not producing accurate results, debugging through the dev tools and inspecting elements while altering their HTML/CSS is required to identify correct structure. 
 
 <br>
 
